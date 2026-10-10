@@ -1,6 +1,6 @@
 from sqlalchemy import String,DateTime,Text
 from sqlalchemy.orm import DeclarativeBase,Mapped,mapped_column
-from datetime import datetime
+from datetime import datetime,UTC
 
 class Base(DeclarativeBase):
     pass
@@ -13,7 +13,7 @@ class Document(Base):
     subject: Mapped[str] = mapped_column(Text,nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
+        default=datetime.now(UTC),
         nullable=True
     )
     file_path : Mapped[str | None] = mapped_column(Text,nullable=True)

@@ -62,6 +62,11 @@ def search_documents(
     q: str = Query(..., min_length=1),
     db: Session = Depends(get_db)
 ):
+    if not q.strip():
+        raise HTTPException(
+            status_code=422,
+            detail="Search query cannot be empty or whitespace."
+    )
     search_query = func.plainto_tsquery("english", q)
 
     document_vector = func.to_tsvector(
