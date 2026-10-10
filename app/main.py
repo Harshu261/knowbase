@@ -6,6 +6,8 @@ from fastapi import UploadFile,File,Form
 
 from fastapi import FastAPI, Depends,HTTPException
 from pydantic import BaseModel
+from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Session
 
 from fastapi import Query
@@ -51,15 +53,33 @@ def get_documents(db:Session = Depends(get_db)):
 
     return documents
 
-@app.get("/documents/search",
-         response_model=list[DocumentResponse])
+
+@app.get(
+    "/documents/search",
+    response_model=list[DocumentResponse]
+)
 def search_documents(
-    q: str = Query(...,min_length=1),
+    q: str = Query(..., min_length=1),
     db: Session = Depends(get_db)
 ):
-    documents = db.query(Document).filter(
-        Document.content.ilike(f"%{q}%")
-    ).all()
+    search_query = func.plainto_tsquery("english", q)
+
+    document_vector = func.to_tsvector(
+        "english",
+        func.coalesce(Document.content, "")
+    )
+
+    relevance = func.ts_rank(
+        document_vector,
+        search_query
+    )
+
+    documents = (
+        db.query(Document)
+        .filter(document_vector.op("@@")(search_query))
+        .order_by(relevance.desc())
+        .all()
+    )
 
     return documents
 
